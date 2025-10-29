@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -35,22 +35,7 @@ const feedTypes = ["Alimento de inicio", "Alimento de crecimiento", "Alimento de
 const units = ["kg", "lbs", "g"]
 
 export function FeedManagement() {
-  const [inventory, setInventory] = useState<FeedInventory[]>([
-    {
-      id: "FD001",
-      feedType: "Starter Feed",
-      availableQuantity: 500,
-      unit: "kg",
-      dateAdded: "2025-01-10",
-    },
-    {
-      id: "FD002",
-      feedType: "Grower Feed",
-      availableQuantity: 750,
-      unit: "kg",
-      dateAdded: "2025-01-12",
-    },
-  ])
+  const [inventory, setInventory] = useState<FeedInventory[]>([])
 
   const [consumption, setConsumption] = useState<FeedConsumption[]>([
     {
@@ -84,43 +69,31 @@ export function FeedManagement() {
     date: "",
   })
 
-  // const handleAddFeed = (e: React.FormEvent) => {
-  //   e.preventDefault()
+  useEffect(() => {
+    const fetchFood = async () => {
+      try {
+        const response = await fetch("http://localhost:8080/api/food/report");
+        if (!response.ok) {
+          throw new Error("Error al obtener los alimentos");
+        }
+        const data = await response.json();
 
-  //   if (!addFeedForm.foodType || !addFeedForm.availableQuantity || !addFeedForm.dateInsert) {
-  //     toast({
-  //       title: "Validation Error",
-  //       description: "Please fill in all fields",
-  //       variant: "destructive",
-  //     })
-  //     return
-  //   }
+        const mapped = data.map((food: any) => ({
+          id: food.foodId,
+          feedType: food.type,
+          availableQuantity: food.availableQuantity,
+          unit: food.unitMeasurement,
+          dateAdded: food.dateInsert,
+        }));
 
-  //   // if (inventory.some((item) => item.id === addFeedForm.id)) {
-  //   //   toast({
-  //   //     title: "Validation Error",
-  //   //     description: "Feed ID already exists",
-  //   //     variant: "destructive",
-  //   //   })
-  //   //   return
-  //   // }
+        setInventory(mapped);
+      } catch (error) {
+        console.error("Error cargando inventario: ", error)
+      }
+    };
 
-  //   const newFeed: FeedInventory = {
-  //     id: "default",
-  //     feedType: addFeedForm.foodType,
-  //     quantity: Number.parseFloat(addFeedForm.availableQuantity),
-  //     unit: addFeedForm.unit,
-  //     dateAdded: addFeedForm.dateInsert,
-  //   }
-
-  //   setInventory([...inventory, newFeed])
-  //   setAddFeedForm({foodType: "", availableQuantity: "", unit: "kg", dateInsert: "" })
-  //   setShowAddFeed(false)
-  //   toast({
-  //     title: "Success",
-  //     description: "Feed added to inventory",
-  //   })
-  // }
+    fetchFood();
+  }, [])
 
   const handleAddFeed = async(e: React.FormEvent) => {
     e.preventDefault();
@@ -410,7 +383,7 @@ export function FeedManagement() {
                           {/* <TableCell>{item.availableQuantity.toLocaleString()}</TableCell> */}
                           <TableCell>{item.availableQuantity?.toLocaleString?.() ?? 0}</TableCell>
                           <TableCell>{item.unit}</TableCell>
-                          <TableCell>{new Date(item.dateAdded).toLocaleDateString()}</TableCell>
+                          <TableCell>{new Date(item.dateAdded).toLocaleDateString("es-CO", {timeZone: "UTC"})}</TableCell>
                         </TableRow>
                       ))
                     )}
