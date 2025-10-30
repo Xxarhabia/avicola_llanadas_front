@@ -37,16 +37,7 @@ const units = ["kg", "lbs", "g"]
 export function FeedManagement() {
   const [inventory, setInventory] = useState<FeedInventory[]>([])
 
-  const [consumption, setConsumption] = useState<FeedConsumption[]>([
-    {
-      id: "FC001",
-      flockId: "FL001",
-      feedType: "Starter Feed",
-      quantity: 50,
-      unit: "kg",
-      date: "2025-01-20",
-    },
-  ])
+  const [consumption, setConsumption] = useState<FeedConsumption[]>([])
 
   const [showAddFeed, setShowAddFeed] = useState(false)
   const [showRecordConsumption, setShowRecordConsumption] = useState(false)
@@ -93,6 +84,33 @@ export function FeedManagement() {
     };
 
     fetchFood();
+  }, [])
+
+  useEffect(() => {
+    const fetchConsumption = async () => {
+      try {
+        const response = await fetch("http://localhost:8080/api/food/report-consumption");
+        if (!response.ok) {
+          throw new Error("Error al obtener los alimentos");
+        }
+        const data = await response.json();
+
+        const mapped = data.map((consum: any) => ({
+          id: consum.id,
+          flockId: consum.birdLot.lotId,
+          feedType: consum.food.foodId,
+          quantity: consum.quantityUsed,
+          unit: consum.unit,
+          date: consum.date,
+        }));
+
+        setConsumption(mapped);
+      } catch (error) {
+        console.error("Error cargando consumos", error);
+      }
+    };
+
+    fetchConsumption();
   }, [])
 
   const handleAddFeed = async(e: React.FormEvent) => {
@@ -161,8 +179,8 @@ export function FeedManagement() {
     }
   }
 
-  const handleRecordConsumption = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleRecordConsumption = async (e: React.FormEvent) => {
+    e.preventDefault();
 
     if (!consumptionForm.flockId || !consumptionForm.feedType || !consumptionForm.quantity || !consumptionForm.date) {
       toast({
@@ -170,54 +188,91 @@ export function FeedManagement() {
         description: "Please fill in all fields",
         variant: "destructive",
       })
-      return
+      return;
     }
 
-    const consumedQty = Number.parseFloat(consumptionForm.quantity)
+    const consumedQty = Number.parseFloat(consumptionForm.quantity);
 
-    // Update inventory
-    const feedItem = inventory.find((item) => item.feedType === consumptionForm.feedType)
+    const feedItem = inventory.find((item) => item.feedType === consumptionForm.feedType);
     if (!feedItem) {
       toast({
         title: "Error",
-        description: "Feed type not found in inventory",
+        description: "El tipo de alimento no existe en el inventario",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (feedItem.availableQuantity < consumedQty) {
       toast({
         title: "Error",
-        description: "Insufficient feed in inventory",
-        variant: "destructive",
+        description: "Cantidad insuficiente de alimento en el inventario",
+        variant: "destructive"
       })
-      return
     }
 
-    setInventory(
-      inventory.map((item) =>
-        item.feedType === consumptionForm.feedType ? { ...item, quantity: item.availableQuantity - consumedQty } : item,
-      ),
-    )
+    try {
 
-    const newConsumption: FeedConsumption = {
-      id: `FC${String(consumption.length + 1).padStart(3, "0")}`,
-      flockId: consumptionForm.flockId,
-      feedType: consumptionForm.feedType,
-      quantity: consumedQty,
-      unit: consumptionForm.unit,
-      date: consumptionForm.date,
+      const response = await fetch("http://localhost:8080/api/food/consumption", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          birdLotId: consumptionForm.flockId,
+          typeFood: consumptionForm.feedType,
+          quantityUsed: consumptionForm.quantity,
+          unit: consumptionForm.unit,
+          dateInsert: consumptionForm.date,
+        }),
+      });
+
+      if (!response.ok) { 
+        throw new Error("Error al registrar el consumo de alimento");
+      }
+
+      const result = await response.json();
+      if (!result.status) {
+        throw new Error(result.rsp_msg || "Error en la respuesta del servidor")
+      }
+
+      const newConsumption = result.rsp_data;
+
+      setInventory(
+        inventory.map((item) =>
+          item.feedType === consumptionForm.feedType
+            ? { ...item, availableQuantity: item.availableQuantity - consumedQty}
+            : item
+        )
+      );
+
+      setConsumption([
+        ...consumption,
+        {
+          id: newConsumption.id,
+          date: newConsumption.date,
+          quantity: newConsumption.quantityUsed,
+          flockId: newConsumption.birdLot.lotId,
+          feedType: newConsumption.food.type,
+          unit: newConsumption.food.unitMeasurement,
+        },
+      ]);
+
+      setConsumptionForm({ flockId: "", feedType: "", quantity: "", unit: "KG", date: "" });
+      setShowRecordConsumption(false);
+      toast({
+        title: "Exito",
+        description: "Consumo de alimento registrado",
+      });
+
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Unexpected error",
+        variant: "destructive",
+      });
     }
-
-    setConsumption([...consumption, newConsumption])
-    setConsumptionForm({ flockId: "", feedType: "", quantity: "", unit: "kg", date: "" })
-    setShowRecordConsumption(false)
-    toast({
-      title: "Success",
-      description: "Feed consumption recorded",
-    })
-  }
+  };
 
   const totalInventoryValue = inventory.reduce((sum, item) => sum + item.availableQuantity, 0)
 
