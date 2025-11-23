@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 
 type SaleType = "aves" | "alimento"
+type BirdType = "Pollo de engorde" | "Ponedora" | "Pavo" | "Pato" | "Codorniz"
+type FoodType = "Alimento de inicio" | "Alimento de crecimiento" | "Alimento de finalización" | "Alimento para ponedoras" | "Suplemento"
 
 type Sale = {
   id: string
@@ -196,6 +198,48 @@ export function SalesManagement() {
                     </SelectContent>
                   </Select>
                 </div>
+                {formData.type === "aves" && (
+                  <div className="space-y-2">
+                    <label htmlFor="birdType">Tipo de Ave *</label>
+                    <Select
+                      value={formData.itemDescription}
+                      onValueChange={(value) => setFormData({ ...formData, itemDescription: value })}
+                    >
+                      <SelectTrigger id="birdType">
+                        <SelectValue placeholder="Seleccione un tipo de ave"/>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pollo de engorde">Pollo de engorde</SelectItem>
+                        <SelectItem value="Ponedora">Ponedora</SelectItem>
+                        <SelectItem value="Pavo">Pavo</SelectItem>
+                        <SelectItem value="Pato">Pato</SelectItem>
+                        <SelectItem value="Codorniz">Codorniz</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {formData.type === "alimento" && (
+                  <div className="space-y-2">
+                    <label htmlFor="foodType">Tipo de alimento *</label>
+                    <Select
+                      value={formData.itemDescription}
+                      onValueChange={(value) => setFormData({ ...formData, itemDescription: value })}
+                    >
+                      <SelectTrigger id="foodType">
+                        <SelectValue placeholder="Seleccione un tipo de alimento"/>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="alimento de inicio">Alimento de inicio</SelectItem>
+                        <SelectItem value="alimento de crecimiento">Alimento de crecimiento</SelectItem>
+                        <SelectItem value="alimento de finalización">Alimento de finalización</SelectItem>
+                        <SelectItem value="alimento para ponedoras">Alimento para ponedoras</SelectItem>
+                        <SelectItem value="suplemento">Suplemento</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   <Label htmlFor="itemDescription">Descripción *</Label>
                   <Input
